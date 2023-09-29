@@ -1,6 +1,4 @@
-# app.py 
-
-# Libraries for building GUI 
+# Libraries for building GUI (Graphical User Interface)
 import tkinter as tk
 import customtkinter as ctk 
 
@@ -14,45 +12,47 @@ from PIL import ImageTk
 
 # private modules 
 from authtoken import auth_token
-from generate_image_from_text import generate_image
+import config as cf
 
 # Create app user interface
 app = tk.Tk()
-app.geometry("532x632")
-app.title("Text to Image app")
-app.configure(bg='black')
-ctk.set_appearance_mode("dark") 
+app.geometry(cf.APP_GEOMETRY)
+app.title(cf.APP_TITLE)
+app.configure(bg=cf.APP_BACKGROUND)
+ctk.set_appearance_mode(cf.APP_APPERANCE_MODE) 
 
 # Create input box on the user interface 
-prompt = ctk.CTkEntry(height=40, width=512, text_font=("Arial", 15), text_color="white", fg_color="black") 
-prompt.place(x=10, y=10)
+prompt = ctk.CTkEntry(**cf.PROMPT_BOX_INTERFACE) 
+prompt.place(**cf.PROMPT_BOX_PLACE_COOR)
 
 # Create a placeholder to show the generated image
-img_placeholder = ctk.CTkLabel(height=512, width=512, text="")
-img_placeholder.place(x=10, y=110)
+img_placeholder = ctk.CTkLabel(**cf.IMAGE_PLACEHOLDER_INTERFACE)
+img_placeholder.place(cf.IMAGE_PLACEHOLDER_COOR)
 
 # Download stable diffusion model from hugging face 
-modelid = "CompVis/stable-diffusion-v1-4"
-device = "cuda"
-stable_diffusion_model = StableDiffusionPipeline.from_pretrained(modelid, revision="fp16", torch_dtype=torch.float16, use_auth_token=auth_token) 
-stable_diffusion_model.to(device) 
+stable_diffusion_model = StableDiffusionPipeline.from_pretrained(cf.MODELID, revision=cf.REVISION, torch_dtype=torch.float16, use_auth_token=auth_token) 
+stable_diffusion_model.to(cf.DEVICE) 
 
 # Generate image from text 
 def generate_image(): 
     """ This function generate image from a text with stable diffusion"""
-    with autocast(device): 
-        image = stable_diffusion_model(prompt.get(),guidance_scale=8.5)["sample"][0]
+    with autocast(cf.DEVICE): 
+        image = stable_diffusion_model(prompt.get(),guidance_scale=cf.GUIDANCE_SCALE)["sample"][0]
+    
+    # Convert image values to uint8
+    image_np = (image * 255).round().astype("uint8")
     
     # Save the generated image
-    image.save('generatedimage.png')
+    image_pil = ImageTk.fromarray(image_np)
+    image_pil.save('generatedimage.png')
     
     # Display the generated image on the user interface
-    img = ImageTk.PhotoImage(image)
+    img = ImageTk.PhotoImage(image_pil)
     img_placeholder.configure(image=img) 
 
-trigger = ctk.CTkButton(height=40, width=120, text_font=("Arial", 15), text_color="black", fg_color="white",
-                         command=generate_image) 
-trigger.configure(text="Generate")
-trigger.place(x=206, y=60) 
+# Create a trigger button to give the generate image action in the app.
+trigger = ctk.CTkButton(**cf.TRIGGER_BUTTON_INTERFACE, command=generate_image) 
+trigger.configure(text=cf.TRIGGER_BUTTON_TEXT)
+trigger.place(**cf.TRIGGER_BUTTON_PLACE_COOR) 
 
 app.mainloop()
